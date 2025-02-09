@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Garage</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        /* Resetiranje osnovnih stilova */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Opšti stilovi za telo */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;  /* Promijenjeno na flex-start */
+            height: 100vh;
+            color: #333;
+            padding-top: 150px; /* Dodano za prostor iznad */
+        }
+
+        /* Stilovi za glavni sadržaj */
+        h1 {
+            font-size: 2.5rem;
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* Container za dugmadi */
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-left: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:active {
+            background-color: #388e3c;
+        }
+
+        /* Stil za tekstualne statuse */
+        p {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #statusText {
+            font-weight: bold;
+            color: #000000;
+        }
+
+        #carDetection {
+            color: #ff9f22;
+            font-weight: bold;
+        }
+
+        /* Responsive dizajn */
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button {
+                margin-bottom: 10px;
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <h1>Kontrola Garaže</h1>
+        <div class="controls">
+            <button onclick="openGarage()">Otvori Garažu</button>
+            <button onclick="closeGarage()">Zatvori Garažu</button>
+        </div>
+        
+        <p id="statusText"></p> <!-- Ovdje će se prikazivati status garaže -->
+        <p id="carDetection">Auto nije detektovano</p> <!-- Ovdje će se prikazivati detekcija auta -->
+
+    </div>
+
+    <script>
+        // 🔥 Firebase konfiguracija
+        var firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "https://najnoviji-562ad-default-rtdb.europe-west1.firebasedatabase.app/",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        function toggleLED() {
+            fetch('/led/on')
+                .then(response => response.text())
+                .then(data => console.log(data))
+                .catch(error => console.error('Greška:', error));
+        }
+
+        // 🔥 Inicijalizacija Firebase-a
+        firebase.initializeApp(firebaseConfig);
+        var database = firebase.database();
+
+        var previousStatus = null;  // Početni status (samo za praćenje prethodnog statusa)
+
+        function openGarage() {
+            // Postavljamo status na 1 (garaža se otvara)
+            database.ref("garage/status").set(1);
+            document.getElementById("statusText").innerText = "Garaža se otvara...";
+        }
+
+        function closeGarage() {
+            // Postavljamo status na 0 (garaža se zatvara)
+            database.ref("garage/status").set(0);
+            document.getElementById("statusText").innerText = "Garaža se zatvara...";
+        }
+
+        // 🚪 Praćenje statusa garaže
+        database.ref("garage/status").on("value", function(snapshot) {
+            var status = snapshot.val();
+
+            if (status == 1) {
+                document.getElementById("statusText").innerText = "Garaža je otvorena.";
+                previousStatus = 1;
+            } else if (status == 0) {
+                document.getElementById("statusText").innerText = "Garaža je zatvorena.";
+                previousStatus = 0;
+            } else if (status == 2) {
+                if (previousStatus === 1) {
+                    document.getElementById("statusText").innerText = "Garaža je otvorena.";
+                } else if (previousStatus === 0) {
+                    document.getElementById("statusText").innerText = "Garaža je zatvorena.";
+                }
+            } else {
+                document.getElementById("statusText").innerText = "Nepoznat status garaže.";
+            }
+        });
+
+        // 🚗 Praćenje detekcije auta
+        database.ref("garage/detekcija").on("value", function(snapshot) {
+            var detekcija = snapshot.val();
+
+            if (detekcija === 1) {
+                document.getElementById("carDetection").innerText = "🚗 Auto je detektovano!";
+            } else {
+                document.getElementById("carDetection").innerText = "Auto nije detektovano";
+            }
+        });
+    </script>
+
+</body>
+</html>
